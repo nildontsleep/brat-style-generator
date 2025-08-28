@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brat Style Generator</title>
+<link rel="icon" type="image/png" href="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/Charli_XCX_-_Brat_%28album_cover%29.svg/2048px-Charli_XCX_-_Brat_%28album_cover%29.svg.png">
+<script src="https://cdn.jsdelivr.net/npm/vue@3.4.0/dist/vue.global.prod.js"></script>
+<style>
+  /* Windows 98 style */
+  body {
+    font-family: 'MS Sans Serif', Arial, sans-serif;
+    background: #c0c0c0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+  }
+  .window {
+    background: #e0e0e0;
+    border: 2px solid #fff;
+    box-shadow: 2px 2px #000;
+    padding: 12px;
+    width: 90%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .title-bar {
+    background: #000080;
+    color: white;
+    padding: 4px 8px;
+    font-weight: bold;
+    margin-bottom: 8px;
+  }
+  canvas {
+    border: 2px inset #fff;
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+  input[type="text"], input[type="color"] {
+    padding: 4px;
+    border: 2px inset #fff;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .controls label {
+    display: block;
+    margin: 4px 0;
+  }
+  button {
+    padding: 6px 12px;
+    border: 2px outset #fff;
+    background: #c0c0c0;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  button:active {
+    border: 2px inset #fff;
+  }
+  .advanced {
+    margin-top: 8px;
+    padding: 6px;
+    border: 2px inset #fff;
+    background: #d0d0d0;
+  }
+</style>
+</head>
+<body>
+<div id="app" class="window">
+  <div class="title-bar">Brat Style Generator</div>
+  <canvas ref="canvas" width="400" height="400"></canvas>
+
+  <div class="controls">
+    <input type="text" v-model="text" placeholder="Enter text here">
+
+    <label>
+      <input type="checkbox" v-model="transparent"> Transparent
+    </label>
+
+    <label>
+      <input type="radio" v-model="textColorChoice" value="black"> Black Text
+    </label>
+    <label>
+      <input type="radio" v-model="textColorChoice" value="white"> White Text
+    </label>
+
+    <label>
+      <input type="checkbox" v-model="dark"> Dark Background
+    </label>
+    <label>
+      <input type="checkbox" v-model="light"> Light Background
+    </label>
+
+    <label>
+      <input type="checkbox" v-model="advanced"> Advanced Mode
+    </label>
+
+    <div class="advanced" v-if="advanced">
+      <label>Custom Background: <input type="color" v-model="customBg"></label>
+      <label>Custom Text Color: <input type="color" v-model="customText"></label>
+    </div>
+
+    <button @click="saveImage">Save Image</button>
+  </div>
+</div>
+
+<script>
+const { createApp, onMounted, ref, watch } = Vue;
+
+createApp({
+  setup() {
+    const canvas = ref(null);
+    const text = ref('hi');
+    const transparent = ref(false);
+    const dark = ref(false);
+    const light = ref(false);
+    const textColorChoice = ref('black');
+    const advanced = ref(false);
+    const customBg = ref('#ffffff');
+    const customText = ref('#000000');
+
+    const ctx = ref(null);
+
+    onMounted(() => {
+      ctx.value = canvas.value.getContext('2d');
+      draw();
+    });
+
+    watch([text, transparent, dark, light, textColorChoice, advanced, customBg, customText], draw);
+
+    function chunkText(str) {
+      const words = str.split(/\s+/);
+      let lines = [];
+      for (let i = 0; i < words.length; i += 3) {
+        lines.push(words.slice(i, i+3).join(" "));
+      }
+      return lines;
+    }
+
+    function fitText(lines, maxWidth, maxHeight) {
+      let fontSize = maxHeight / lines.length;
+      let fits = false;
+      while (!fits && fontSize > 10) {
+        ctx.value.font = `${fontSize}px Arial`;
+        fits = lines.every(line => ctx.value.measureText(line).width <= maxWidth * 0.9);
+        if (!fits) fontSize -= 2;
+      }
+      return fontSize;
+    }
+
+    function drawText(lines, fontSize, textColor) {
+      const lineHeight = fontSize * 1.2;
+      const totalHeight = lineHeight * lines.length;
+      let y = (canvas.value.height - totalHeight)/2 + lineHeight/2;
+      ctx.value.fillStyle = textColor;
+      ctx.value.font = `${fontSize}px Arial`;
+      ctx.value.textBaseline = "middle";
+      ctx.value.shadowColor = textColor;
+      ctx.value.shadowBlur = 15;
+
+      for (let line of lines) {
+        const words = line.split(" ");
+        const metrics = words.map(w => ctx.value.measureText(w).width);
+        const wordsWidth = metrics.reduce((a,b)=>a+b,0);
+        let spaceWidth = words.length>1 ? (canvas.value.width*0.9 - wordsWidth)/(words.length-1) : 0;
+        let x = (canvas.value.width - (wordsWidth + spaceWidth*(words.length-1)))/2;
+
+        for (let i=0;i<words.length;i++){
+          ctx.value.fillText(words[i], x + metrics.slice(0,i).reduce((a,b)=>a+b,0) + i*spaceWidth, y);
+        }
+        y += lineHeight;
+      }
+      ctx.value.shadowBlur = 0;
+    }
+
+    function draw() {
+      let bgColor = "#ffffff";
+      let textColor = textColorChoice.value;
+
+      if (advanced.value) {
+        bgColor = customBg.value;
+        textColor = customText.value;
+      } else if (transparent.value) {
+        bgColor = "transparent";
+      } else if (dark.value) {
+        bgColor = "#000";
+        textColor = "white";
+      } else if (light.value) {
+        bgColor = "#fff";
+        textColor = "black";
+      }
+
+      ctx.value.clearRect(0,0,canvas.value.width,canvas.value.height);
+      if(bgColor !== "transparent") {
+        ctx.value.fillStyle = bgColor;
+        ctx.value.fillRect(0,0,canvas.value.width, canvas.value.height);
+      }
+
+      const lines = chunkText(text.value);
+      const fontSize = fitText(lines, canvas.value.width, canvas.value.height);
+      drawText(lines, fontSize, textColor);
+    }
+
+    function saveImage() {
+      const dataUrl = canvas.value.toDataURL("image/png");
+      // Call the Python API exposed by pywebview
+      window.pywebview.api.save_image(dataUrl).then(response => {
+          alert(response); // optional: shows "Saved as brat-style.png"
+      });
+    }
+
+
+    return { canvas, text, transparent, dark, light, textColorChoice, advanced, customBg, customText, saveImage };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
