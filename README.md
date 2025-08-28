@@ -77,6 +77,7 @@ python main.py
 <img width="400" height="400" alt="brat-style" src="https://github.com/user-attachments/assets/d16b9386-56a9-4a11-a921-4487a10f63b1" />
 <img width="400" height="400" alt="brat-style" src="https://github.com/user-attachments/assets/5c56699f-85a2-4f97-abe8-557681da95b5" />
 <img width="400" height="400" alt="brat-style" src="https://github.com/user-attachments/assets/2927e827-7595-44db-a6c7-524d43b610ca" />
+<img width="400" height="400" alt="brat-style" src="https://github.com/user-attachments/assets/df4d753a-581e-446c-a691-0605122fe707" />
 
 
 ---
